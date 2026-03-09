@@ -161,5 +161,5 @@ void updateThirdScreen(M5Canvas &sprite) {
         sprite.setTextDatum(top_left); 
     }
 
-    sprite.pushSprite(0, 0); 
+    // Usunięto sprite.pushSprite(0, 0); 
 }

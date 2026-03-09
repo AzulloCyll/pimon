@@ -204,6 +204,5 @@ void updateSecondScreen(M5Canvas &sprite) {
         sprite.setTextDatum(top_left); 
     }
         
-    // Normalny zrzut warstwy
-    sprite.pushSprite(0, 0); 
+    // Usunięto sprite.pushSprite(0, 0); by zarządzać animacjami w DisplayUi
 }

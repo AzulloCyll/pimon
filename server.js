@@ -60,3 +60,4 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Serwer monitora RPi uruchomiony!`);
     console.log(`Nasłuchuje żądań GET na http://0.0.0.0:${PORT}/stats`);
 });
+

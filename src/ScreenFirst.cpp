@@ -53,5 +53,5 @@ void updateFirstScreen(M5Canvas &sprite, const SensorData &data) {
         sprite.drawString("Brak", 5, 105);
     }
 
-    sprite.pushSprite(0, 0); // Zrzut ramki na ekran
+    // Usunięto sprite.pushSprite(0, 0); by zarządzać tym z poziomu DisplayUi
 }
