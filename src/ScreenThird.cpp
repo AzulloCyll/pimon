@@ -30,11 +30,10 @@ void fetchRaspberryData() {
     cachedRpiData.lastHttpCode = httpCode;
     
     if (httpCode == 200) {
-        String payload = http.getString();
         DynamicJsonDocument doc(1024);
         
-        // Zabezpieczenie przed uszkodzonym JSONem
-        DeserializationError error = deserializeJson(doc, payload);
+        // Zabezpieczenie przed uszkodzonym JSONem oraz strumieniowe paroswanie
+        DeserializationError error = deserializeJson(doc, http.getStream());
         if (!error) {
             // Zakładam tu domyślne nazwy właściwości w JSON, takie jak "cpu", "ram", "temp"
             // Jeśli twoje API używa innych nazw, zmień je poniżej!
@@ -49,21 +48,26 @@ void fetchRaspberryData() {
     http.end();
 }
 
+void rpiFetchLoop(void* parameter) {
+    while(true) {
+        fetchRaspberryData();
+        // Czekaj 5 sekund bez zabijania wątku
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+}
+
 void handleRaspberryBackgroundFetch() {
-    // Odświeżaj statystyki co 5 sekund
-    if (millis() - lastRpiUpdate > 5000 || lastRpiUpdate == 0) {
+    static bool taskStarted = false;
+    if (!taskStarted) {
         xTaskCreate(
-            [](void* parameter) {
-                fetchRaspberryData(); 
-                vTaskDelete(NULL); 
-            },
+            rpiFetchLoop, 
             "RpiFetchTask", 
             4096,              
             NULL,              
             1,                 
             NULL               
         );
-        lastRpiUpdate = millis();
+        taskStarted = true;
     }
 }
 

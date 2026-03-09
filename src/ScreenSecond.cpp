@@ -105,9 +105,9 @@ void fetchPiholeData() {
     cachedPiholeData.lastHttpCode = httpCode;
     
     if (httpCode == 200) {
-        String payload = http.getString();
         DynamicJsonDocument doc(2048);
-        deserializeJson(doc, payload);
+        // OPTYMALIZACJA: Bezpośrednie parsowanie ze strumienia sieciowego
+        deserializeJson(doc, http.getStream());
 
         cachedPiholeData.blocked = doc["queries"]["blocked"];
         cachedPiholeData.total = doc["queries"]["total"];
@@ -124,28 +124,29 @@ void fetchPiholeData() {
     http.end();
 }
 
+void piholeFetchLoop(void* parameter) {
+    while(true) {
+        fetchPiholeData();
+        // Czekaj 60 sekund w trybie uśpienia wątku - zadanie nigdy nie umiera,
+        // przez co zapobiegamy fragmentacji pamięci RAM (Heap Fragmentation).
+        vTaskDelay(pdMS_TO_TICKS(60000));
+    }
+}
+
 void handlePiholeBackgroundFetch() {
-    // Sprawdzamy czy nadszedł czas na aktualizację (zwiekszony odstep do 60s w razie 429)
-    if (millis() - lastPiholeUpdate > 60000 || lastPiholeUpdate == 0) {
-        // Aby uniknąć blokowania pętli głównej i czujnika TMOS powołujemy krótkotrwałe
-        // zadanie w tle (Task) zarządzane przez system operacyjny FreeRTOS. 
-        // 4096 = rozmiar stosu w bajtach dla nowego wątku
+    // Zostawiliśmy starą nazwę dla spójności z `main.cpp`, ale teraz
+    // funkcja tylko JEDEN RAZ odpala permanentny wątek na całe życie programu.
+    static bool taskStarted = false;
+    if (!taskStarted) {
         xTaskCreate(
-            [](void* parameter) {
-                // Kod działający wielowątkowo w tle
-                fetchPiholeData(); 
-                // Skoro wątek skończył, zabijamy go zwalniając pamięć
-                vTaskDelete(NULL); 
-            },
+            piholeFetchLoop, 
             "PiholeFetchTask", 
             4096,              
             NULL,              
-            1,                 // Priorytet wątku (1 to normalny, pętla Arduino to zwykle 1)
+            1,                 
             NULL               
         );
-        
-        // Zapisujemy czas natychmiast by pętla nie spamowała tworzeniem wątków
-        lastPiholeUpdate = millis();
+        taskStarted = true;
     }
 }
 

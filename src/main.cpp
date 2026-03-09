@@ -81,9 +81,15 @@ void loop() {
     const unsigned long SWIPE_COOLDOWN_MS = 1000; // Wydłużamy do 2 sekund
     
     if (readTmosData(lastSensorData)) {
-        needUpdate = true;
+        // Zamiast odświeżać ekran zawsze przy otrzymaniu danych z TMOS, wymuszamy 
+        // przerysowanie tylko dla ekranu nr 0, który te dane bezpośrednio wyświetla.
+        if (currentScreen == 0) {
+            needUpdate = true;
+        }
+        
         // Wypisane do celów diagnostycznych, byś mógł podejrzeć w Monitorze dlaczego ekran się świeci
-        Serial.printf("P:%d M:%d\n", lastSensorData.isPresent, lastSensorData.isMoving);
+        // Zakomentowane aby nie "spamować" konsoli 15x na sekundę. Odkomentuj w razie debuggowania.
+        // Serial.printf("P:%d M:%d\n", lastSensorData.isPresent, lastSensorData.isMoving);
 
         // Obsługa machnięcia ręką (zmiana ekranu) - reagujemy tylko na moment pojawienia się ruchu (zbocze narastające)
         if (lastSensorData.isMoving && !prevWasMoving && (millis() - lastSwipeTime > SWIPE_COOLDOWN_MS)) {
@@ -122,6 +128,14 @@ void loop() {
             needUpdate = true; // Wymuś odświeżenie grafiki pod nowym kątem
             lastActivityTime = millis(); // Obrót traktujemy jako aktywność wybudzającą wygaszacz
         }
+    }
+
+    // Jeśli używamy ekranu nr 1 (Pi-Hole) lub nr 2 (Raspberry), statystyki w tle odświeżają się 
+    // bardzo rzadko (1-10 sekund). Nie ma sensu przerysowywać wyświetlacza aż 15 razy na sekundę.
+    static unsigned long lastStaticScreenUpdate = 0;
+    if (currentScreen != 0 && (millis() - lastStaticScreenUpdate > 1000)) {
+        needUpdate = true;
+        lastStaticScreenUpdate = millis();
     }
 
     // Rejestrowanie aktywności z TMOS - jeśli to Ty patrzysz na ekran, `isPresent` nie pozwoli mu zgasnąć!
