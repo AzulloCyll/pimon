@@ -74,15 +74,6 @@ void loop() {
     }
     
     static SensorData lastSensorData = {0, 0, 0.0, 0.0, false, false};
-    static bool prevWasMoving = false;
-    
-    // Zmienne do obsługi gestów (machnięcia ręką)
-    static unsigned long lastSwipeTime = 0;
-    const unsigned long SWIPE_COOLDOWN_MS = 1500; // Zmniejszone na 1.5s (kompromis między blokadą a responsywnością)
-    
-    // Zmienne do filtrowania szumów z czujnika ruchu (Denoising)
-    static int motionFrameCount = 0; 
-    const int MOTION_REQUIRED_FRAMES = 2; // Zmniejszone z 5 do 2: wystarczą ~130ms ruchu, znacznie szybsza reakcja!
     
     if (readTmosData(lastSensorData)) {
         // Zamiast odświeżać ekran zawsze przy otrzymaniu danych z TMOS, wymuszamy 
@@ -90,33 +81,7 @@ void loop() {
         if (currentScreen == 0) {
             needUpdate = true;
         }
-        
-        // Logika Debouncingu ("odszumiania") dla machnięcia ręką
-        if (lastSensorData.isMoving) {
-            motionFrameCount++; // Naliczamy ile razy z rzędu wykryto ruch
-        } else {
-            motionFrameCount = 0; // Przerwany ruch - resetujemy licznik
-        }
-
-        // Reagujemy na ruch, ale tylko gdy trwa on odpowiednio długo (np. realny ruch, a nie ułamek sekundy błędu czujnika)
-        bool isValidMotion = (motionFrameCount >= MOTION_REQUIRED_FRAMES);
-
-        if (isValidMotion && !prevWasMoving && (millis() - lastSwipeTime > SWIPE_COOLDOWN_MS)) {
-            M5.Speaker.tone(1000, 40); // Inny, cichy dźwięk na obudzenie/zmianę
-            currentScreen = (currentScreen + 1) % maxScreens;
-            lastSwipeTime = millis();
-            lastActivityTime = millis();
-            needUpdate = true;
-            Serial.println("Wykryto celowe machnięcie! Zmiana ekranu.");
-        }
-        
-        // Zapisujemy poprzedni stan dopiero gdy ruch został przeprocesowany poprawnie
-        if (isValidMotion) {
-           prevWasMoving = true;
-        } else if (!lastSensorData.isMoving) {
-           prevWasMoving = false;
-        }
-    } 
+    }
 
     // --- Obsługa obracania ekranu na podstawie żyroskopu (IMU) ---
     float ax, ay, az;

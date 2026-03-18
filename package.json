@@ -2,5 +2,28 @@
   "dependencies": {
     "express": "^5.2.1",
     "systeminformation": "^5.31.4"
-  }
+  },
+  "name": "atoms3-monitor",
+  "version": "1.0.0",
+  "main": "server-win.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AzulloCyll/pimon.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AzulloCyll/pimon/issues"
+  },
+  "homepage": "https://github.com/AzulloCyll/pimon#readme",
+  "description": ""
 }
