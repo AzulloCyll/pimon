@@ -1,7 +1,7 @@
 #include "DisplayUi.h"
-#include "ScreenFirst.h"
-#include "ScreenSecond.h"
-#include "ScreenThird.h"
+#include "screens/Thermometer.h"
+#include "screens/Pihole.h"
+#include "screens/Raspberry.h"
 
 static M5Canvas sprite(&M5.Display);
 static M5Canvas oldSprite(&M5.Display);
@@ -21,11 +21,11 @@ void initDisplay() {
 
 void renderScreen(M5Canvas &targetSprite, const SensorData &data, int screenIndex) {
     if (screenIndex == 2) {
-        updateThirdScreen(targetSprite);
+        renderRaspberryScreen(targetSprite);
     } else if (screenIndex == 1) {
-        updateSecondScreen(targetSprite);
+        renderPiholeScreen(targetSprite);
     } else {
-        updateFirstScreen(targetSprite, data);
+        renderThermometerScreen(targetSprite, data);
     }
 }
 

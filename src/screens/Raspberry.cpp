@@ -1,4 +1,4 @@
-#include "ScreenThird.h"
+#include "screens/Raspberry.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -71,7 +71,7 @@ void handleRaspberryBackgroundFetch() {
     }
 }
 
-void updateThirdScreen(M5Canvas &sprite) {
+void renderRaspberryScreen(M5Canvas &sprite) {
     sprite.fillSprite(BLACK);
     sprite.setTextDatum(top_left);
 
@@ -160,6 +160,4 @@ void updateThirdScreen(M5Canvas &sprite) {
         sprite.drawString("load...", 124, 124); 
         sprite.setTextDatum(top_left); 
     }
-
-    // Usunięto sprite.pushSprite(0, 0); 
 }

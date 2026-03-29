@@ -1,6 +1,6 @@
-#include "ScreenFirst.h"
+#include "screens/Thermometer.h"
 
-void updateFirstScreen(M5Canvas &sprite, const SensorData &data) {
+void renderThermometerScreen(M5Canvas &sprite, const SensorData &data) {
     // Zmienne statyczne do odświeżania temperatury co 30 sekund
     static float lastDisplayedTemp = 0.0;
     static unsigned long lastTempUpdate = 0;
@@ -45,13 +45,14 @@ void updateFirstScreen(M5Canvas &sprite, const SensorData &data) {
     sprite.drawString("Status obecnosci:", 5, 90);
 
     sprite.setTextSize(2);
-    if (data.isPresent || data.isMoving) {
+    if (!data.isAvailable) {
+        sprite.setTextColor(RED);
+        sprite.drawString("Brak TMOS", 5, 105);
+    } else if (data.isPresent || data.isMoving) {
         sprite.setTextColor(GREEN);
         sprite.drawString("Wykryto", 5, 105);
     } else {
         sprite.setTextColor(0x7BEF); // Szary / Ciemny niebieski
         sprite.drawString("Brak", 5, 105);
     }
-
-    // Usunięto sprite.pushSprite(0, 0); by zarządzać tym z poziomu DisplayUi
 }

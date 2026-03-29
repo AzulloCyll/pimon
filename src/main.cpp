@@ -3,8 +3,9 @@
 #include <WiFi.h>
 #include "SensorTmos.h"
 #include "DisplayUi.h"
-#include "ScreenSecond.h"
-#include "ScreenThird.h"
+#include "screens/Thermometer.h"
+#include "screens/Pihole.h"
+#include "screens/Raspberry.h"
 #include "secrets.h"
 
 int currentScreen = 0;
@@ -24,6 +25,11 @@ void setup() {
     M5.Speaker.setVolume(20); 
 
     initTmosSensor();
+    
+    // Jeśli czujnik nie jest podłączony, zacznij od ekranu PiHole (indeks 1)
+    if (!isSensorAvailable()) {
+        currentScreen = 1;
+    }
     
     // Inicjalizacja polaczenia sieciowego dla PiHole (z timeoutem)
     initPiholeWiFi();

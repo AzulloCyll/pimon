@@ -1,4 +1,4 @@
-#include "ScreenSecond.h"
+#include "screens/Pihole.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -150,7 +150,7 @@ void handlePiholeBackgroundFetch() {
     }
 }
 
-void updateSecondScreen(M5Canvas &sprite) {
+void renderPiholeScreen(M5Canvas &sprite) {
     // Krok rysowania szkieletu / buforowanych danych: błyskawiczne renderowanie natychmiast po kliknięciu
     sprite.fillSprite(BLACK);
     sprite.setTextDatum(top_left);
@@ -203,6 +203,4 @@ void updateSecondScreen(M5Canvas &sprite) {
         sprite.drawString("load...", 124, 124); 
         sprite.setTextDatum(top_left); 
     }
-        
-    // Usunięto sprite.pushSprite(0, 0); by zarządzać animacjami w DisplayUi
 }
