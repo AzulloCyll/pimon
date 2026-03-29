@@ -137,7 +137,8 @@ void loop() {
     handleRaspberryBackgroundFetch();
 
     // Logika włączania i wyłączania (wygaszania) ekranu
-    if (millis() - lastActivityTime > SCREEN_TIMEOUT_MS) {
+    // Uśpij ekran tylko gdy czujnik jest podłączony ORAZ minął zdefiniowany czas bezczynności
+    if (isSensorAvailable() && (millis() - lastActivityTime > SCREEN_TIMEOUT_MS)) {
         if (isScreenOn) {
             M5.Display.sleep(); // Bezpieczniejsze API do twardego uśpienia wyświetlacza 
             // M5.Display.setBrightness(0); 
