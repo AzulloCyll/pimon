@@ -83,7 +83,7 @@ int loginToPihole() {
 
 void fetchPiholeData() {
     if (WiFi.status() != WL_CONNECTED) {
-        cachedPiholeData.lastHttpCode = -1; // Brak sieci
+        cachedPiholeData.lastHttpCode = -100; // Unikalny kod dla braku WiFi (PiH)
         return;
     }
 
@@ -102,6 +102,9 @@ void fetchPiholeData() {
     http.addHeader("X-FTL-SID", sid);
     
     int httpCode = http.GET();
+    if (httpCode < 0) {
+        Serial.printf("[PiHole] Blad HTTP: %d (%s)\n", httpCode, http.errorToString(httpCode).c_str());
+    }
     cachedPiholeData.lastHttpCode = httpCode;
     
     if (httpCode == 200) {
@@ -181,18 +184,51 @@ void renderPiholeScreen(M5Canvas &sprite) {
         snprintf(percentStr, sizeof(percentStr), "%.1f%%", cachedPiholeData.percent);
         sprite.drawString(percentStr, 5, 100); // Było 95, zmiana na 100
         
-    } else if (cachedPiholeData.lastHttpCode == -1) {
+    } else if (cachedPiholeData.lastHttpCode == -100) {
         sprite.fillSprite(RED);
         sprite.setTextColor(WHITE);
-        sprite.setTextSize(1.5);
-        sprite.drawString("Brak WiFi", 5, 40);
+        sprite.setTextDatum(middle_center);
+        sprite.setTextSize(1);
+        sprite.drawString("WiFi (PiH): BRAK", 64, 50);
+        sprite.setTextSize(1);
+        sprite.drawString("Polacz z rutera", 64, 75);
     } else {
         sprite.fillSprite(RED);
         sprite.setTextColor(WHITE);
-        sprite.setTextSize(2);
-        char errStr[16];
-        snprintf(errStr, sizeof(errStr), "ERR:%d", cachedPiholeData.lastHttpCode);
-        sprite.drawString(errStr, 5, 40);
+        sprite.setTextDatum(middle_center);
+        
+        if (cachedPiholeData.lastHttpCode == -1) {
+            sprite.setTextSize(1);
+            sprite.drawString("PiHole: OFFLINE", 64, 50);
+            sprite.setTextSize(2);
+            sprite.drawString("ERR:-1", 64, 75);
+        } else if (cachedPiholeData.lastHttpCode == -3) {
+            sprite.setTextSize(1);
+            sprite.drawString("PiH: Auth Error", 64, 50);
+            sprite.setTextSize(2);
+            sprite.drawString("ERR:-3", 64, 75);
+        } else if (cachedPiholeData.lastHttpCode == -11) {
+            sprite.setTextSize(1);
+            sprite.drawString("PiH: TIMEOUT", 64, 50);
+            sprite.setTextSize(2);
+            sprite.drawString("ERR:-11", 64, 75);
+        } else if (cachedPiholeData.lastHttpCode < 0) {
+            sprite.setTextSize(1);
+            sprite.drawString("Blad Sieci (PiH)", 64, 50);
+            sprite.setTextSize(1.5);
+            char errStr[16];
+            snprintf(errStr, sizeof(errStr), "ERR:%d", cachedPiholeData.lastHttpCode);
+            sprite.drawString(errStr, 64, 75);
+        } else {
+            sprite.setTextSize(1);
+            sprite.drawString("Blad HTTP (PiH)", 64, 50);
+            sprite.setTextSize(1.5);
+            char errStr[16];
+            snprintf(errStr, sizeof(errStr), "HTTP:%d", cachedPiholeData.lastHttpCode);
+            sprite.drawString(errStr, 64, 75);
+        }
+        
+        sprite.setTextDatum(top_left);
     }
 
     // Rysujemy komunikat "load..." jeżeli dane układu zależą od zerowego ładowania

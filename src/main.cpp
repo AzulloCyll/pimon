@@ -6,10 +6,11 @@
 #include "screens/Thermometer.h"
 #include "screens/Pihole.h"
 #include "screens/Raspberry.h"
+#include "screens/PCMonitor.h"
 #include "secrets.h"
 
 int currentScreen = 0;
-const int maxScreens = 3; // ilość obsługiwanych ekranów
+const int maxScreens = 4; // ilość obsługiwanych ekranów (zwiększono dla PC Monitor)
 
 #ifndef PIO_UNIT_TESTING
 void setup() {
@@ -55,16 +56,29 @@ void loop() {
     if (M5.BtnA.isPressed() && M5.BtnA.pressedFor(1000)) {
         if (!postSent) {
             M5.Speaker.tone(1200, 150); // Informacyjny dźwięk długi
-            Serial.println("Długie naciśnięcie - wysyłam sygnał zamknięcia RPi...");
+            // 1. Sygnał do Raspberry Pi (POST)
+            String rpiShutdownUrl = String(SECRET_RPI_API_URL) + "/shutdown";
+            Serial.printf("[SHUTDOWN] Wysylam sygnal do Maliny: %s\n", rpiShutdownUrl.c_str());
             if (WiFi.status() == WL_CONNECTED) {
                 HTTPClient http;
-                String shutdownUrl = String(SECRET_RPI_API_URL) + "/shutdown";
-                http.begin(shutdownUrl); // URL wyłączenia Raspberry
+                http.begin(rpiShutdownUrl); 
                 http.addHeader("Content-Type", "application/json");
                 int httpCode = http.POST("{\"command\":\"poweroff\"}");
-                Serial.printf("Sygnał zamknięcia wysłany, odpowiedź HTTP: %d\n", httpCode);
+                Serial.printf("[SHUTDOWN] Malina - odpowiedz: %d\n", httpCode);
                 http.end();
             }
+
+            // 2. Sygnał do PC (GET)
+            String pcShutdownUrl = String(SECRET_PC_API_URL) + "/shutdown";
+            Serial.printf("[SHUTDOWN] Wysylam sygnal do PC: %s\n", pcShutdownUrl.c_str());
+            if (WiFi.status() == WL_CONNECTED) {
+                HTTPClient http;
+                http.begin(pcShutdownUrl);
+                int httpCode = http.GET(); 
+                Serial.printf("[SHUTDOWN] PC - odpowiedz: %d\n", httpCode);
+                http.end();
+            }
+            
             postSent = true; // Zabezpieczenie przed wielokrotnym wysyłaniem
             lastActivityTime = millis();
         }
@@ -72,7 +86,13 @@ void loop() {
         // Jeśli przycisk został puszczony, a POST nie został wysłany (było to krótkie kliknięcie)
         if (!postSent) {
             M5.Speaker.tone(2000, 40); 
+            
+            // Przełączanie ekranu z pominięciem termometru (0), jeśli czujnik jest nieaktywny
             currentScreen = (currentScreen + 1) % maxScreens;
+            if (currentScreen == 0 && !isSensorAvailable()) {
+                currentScreen = 1;
+            }
+            
             lastActivityTime = millis(); 
             needUpdate = true;
         }
@@ -135,6 +155,9 @@ void loop() {
     
     // -- Pobieranie statystyk malinki również co określoną ilość sekund w tle
     handleRaspberryBackgroundFetch();
+    
+    // -- Pobieranie statystyk PC w tle
+    handlePCBackgroundFetch();
 
     // Logika włączania i wyłączania (wygaszania) ekranu
     // Uśpij ekran tylko gdy czujnik jest podłączony ORAZ minął zdefiniowany czas bezczynności

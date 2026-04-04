@@ -1,70 +1,66 @@
-#include "screens/Raspberry.h"
+#include "screens/PCMonitor.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "secrets.h"
 
-String rpi_api_url = String(SECRET_RPI_API_URL) + "/stats";
+String pc_api_url = String(SECRET_PC_API_URL) + "/pc-stats";
 
-struct RaspberryData {
+struct PCData {
     float cpu = 0.0;
     float ram = 0.0;
     float temp = 0.0;
     int lastHttpCode = 0;
 };
 
-static RaspberryData cachedRpiData;
-static unsigned long lastRpiUpdate = 0;
+static PCData cachedPCData;
 
-void fetchRaspberryData() {
+void fetchPCData() {
     if (WiFi.status() != WL_CONNECTED) {
-        cachedRpiData.lastHttpCode = -100; // Unikalny kod dla braku WiFi (RPi)
+        cachedPCData.lastHttpCode = -100; // Unikalny kod dla braku WiFi (PC)
         return;
     }
 
     HTTPClient http;
-    http.begin(rpi_api_url);
-    http.setTimeout(3000); // 3 sekundy timeoutu uderzenia w API
+    http.begin(pc_api_url);
+    http.setTimeout(3000); // 3 sekundy timeoutu
     
     int httpCode = http.GET();
     if (httpCode < 0) {
-        Serial.printf("[Raspberry] Blad HTTP: %d (%s)\n", httpCode, http.errorToString(httpCode).c_str());
+        Serial.printf("[PC Monitor] Blad HTTP: %d (%s)\n", httpCode, http.errorToString(httpCode).c_str());
     }
-    cachedRpiData.lastHttpCode = httpCode;
+    cachedPCData.lastHttpCode = httpCode;
     
     if (httpCode == 200) {
         DynamicJsonDocument doc(1024);
         
-        // Zabezpieczenie przed uszkodzonym JSONem oraz strumieniowe paroswanie
         DeserializationError error = deserializeJson(doc, http.getStream());
         if (!error) {
-            // Zakładam tu domyślne nazwy właściwości w JSON, takie jak "cpu", "ram", "temp"
-            // Jeśli twoje API używa innych nazw, zmień je poniżej!
-            cachedRpiData.cpu = doc["cpu"] | 0.0;
-            cachedRpiData.ram = doc["ram"] | 0.0;
-            cachedRpiData.temp = doc["temp"] | 0.0;
+            cachedPCData.cpu = doc["cpu"] | 0.0;
+            cachedPCData.ram = doc["ram"] | 0.0;
+            cachedPCData.temp = doc["temp"] | 0.0;
         } else {
-            cachedRpiData.lastHttpCode = -4; // Błąd parsowania JSON
+            cachedPCData.lastHttpCode = -4; // Błąd parsowania JSON
         }
     }
     
     http.end();
 }
 
-void rpiFetchLoop(void* parameter) {
+void pcFetchLoop(void* parameter) {
     while(true) {
-        fetchRaspberryData();
-        // Czekaj 5 sekund bez zabijania wątku
+        fetchPCData();
+        // Czekaj 5 sekund
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
 
-void handleRaspberryBackgroundFetch() {
+void handlePCBackgroundFetch() {
     static bool taskStarted = false;
     if (!taskStarted) {
         xTaskCreate(
-            rpiFetchLoop, 
-            "RpiFetchTask", 
+            pcFetchLoop, 
+            "PCFetchTask", 
             4096,              
             NULL,              
             1,                 
@@ -74,17 +70,17 @@ void handleRaspberryBackgroundFetch() {
     }
 }
 
-void renderRaspberryScreen(M5Canvas &sprite) {
+void renderPCMonitorScreen(M5Canvas &sprite) {
     sprite.fillSprite(BLACK);
     sprite.setTextDatum(top_left);
 
-    // --- Pasek tytułowy ---
+    // --- Pasek tytułowy - Zielony dla PC ---
     sprite.setTextColor(GREEN);
     sprite.setTextSize(1.5);
-    sprite.drawString("RASPBERRY PI", 5, 5);
+    sprite.drawString("MONITOR PC", 5, 5);
     sprite.drawFastHLine(0, 22, 128, WHITE);
 
-    if (cachedRpiData.lastHttpCode == 200 || cachedRpiData.lastHttpCode == 0) {
+    if (cachedPCData.lastHttpCode == 200 || cachedPCData.lastHttpCode == 0) {
         // CPU
         sprite.setTextColor(CYAN);
         sprite.setTextSize(1);
@@ -93,7 +89,7 @@ void renderRaspberryScreen(M5Canvas &sprite) {
         sprite.setTextColor(WHITE);
         sprite.setTextSize(1.5);
         char cpuStr[16];
-        snprintf(cpuStr, sizeof(cpuStr), "%.1f %%", cachedRpiData.cpu);
+        snprintf(cpuStr, sizeof(cpuStr), "%.1f %%", cachedPCData.cpu);
         sprite.drawString(cpuStr, 5, 45);
 
         // RAM
@@ -104,26 +100,26 @@ void renderRaspberryScreen(M5Canvas &sprite) {
         sprite.setTextColor(WHITE);
         sprite.setTextSize(1.5);
         char ramStr[16];
-        snprintf(ramStr, sizeof(ramStr), "%.1f %%", cachedRpiData.ram);
+        snprintf(ramStr, sizeof(ramStr), "%.1f %%", cachedPCData.ram);
         sprite.drawString(ramStr, 5, 80);
 
         // TEMP
         sprite.setTextColor(CYAN);
         sprite.setTextSize(1);
-        sprite.drawString("Temperatura:", 5, 100);
+        sprite.drawString("Temp. GPU:", 5, 100);
         
         sprite.setTextColor(WHITE);
         sprite.setTextSize(1.5);
         char tempStr[16];
-        snprintf(tempStr, sizeof(tempStr), "%.1f \xF7""C", cachedRpiData.temp);
+        snprintf(tempStr, sizeof(tempStr), "%.1f \xF7""C", cachedPCData.temp);
         sprite.drawString(tempStr, 5, 115);
         
-    } else if (cachedRpiData.lastHttpCode == -100) {
+    } else if (cachedPCData.lastHttpCode == -100) {
         sprite.fillSprite(RED);
         sprite.setTextColor(WHITE);
         sprite.setTextDatum(middle_center);
         sprite.setTextSize(1);
-        sprite.drawString("WiFi (RPi): BRAK", 64, 50);
+        sprite.drawString("WiFi (PC): BRAK", 64, 50);
         sprite.setTextSize(1);
         sprite.drawString("Polacz z rutera", 64, 75);
     } else {
@@ -131,45 +127,41 @@ void renderRaspberryScreen(M5Canvas &sprite) {
         sprite.setTextColor(WHITE);
         sprite.setTextDatum(middle_center);
         
-        // Wyświetlanie konkretnego błędu na środku ekranu
-        if(cachedRpiData.lastHttpCode == -4) {
+        if(cachedPCData.lastHttpCode == -4) {
             sprite.setTextSize(1);
-            sprite.drawString("Blad JSON (RPi)", 64, 50);
+            sprite.drawString("Blad JSON (PC)", 64, 50);
             sprite.setTextSize(2);
             sprite.drawString("ERR:-4", 64, 75);
-        } else if(cachedRpiData.lastHttpCode == -1) {
+        } else if(cachedPCData.lastHttpCode == -1) {
             sprite.setTextSize(1);
-            sprite.drawString("RPi: OFFLINE", 64, 50);
+            sprite.drawString("PC: OFFLINE", 64, 50);
             sprite.setTextSize(2);
             sprite.drawString("ERR:-1", 64, 75);
-        } else if(cachedRpiData.lastHttpCode == -11) {
+        } else if(cachedPCData.lastHttpCode == -11) {
             sprite.setTextSize(1);
-            sprite.drawString("RPi: TIMEOUT", 64, 50);
+            sprite.drawString("PC: TIMEOUT", 64, 50);
             sprite.setTextSize(2);
             sprite.drawString("ERR:-11", 64, 75);
-        } else if(cachedRpiData.lastHttpCode < 0) {
-            // Ujemne kody
+        } else if(cachedPCData.lastHttpCode < 0) {
             sprite.setTextSize(1);
-            sprite.drawString("Blad Sieci (RPi)", 64, 50);
+            sprite.drawString("Blad Sieci (PC)", 64, 50);
             sprite.setTextSize(1.5);
             char errStr[16];
-            snprintf(errStr, sizeof(errStr), "ERR:%d", cachedRpiData.lastHttpCode);
+            snprintf(errStr, sizeof(errStr), "ERR:%d", cachedPCData.lastHttpCode);
             sprite.drawString(errStr, 64, 75);
         } else {
-            // Dodatnie kody HTTP (np. 404, 500)
             sprite.setTextSize(1);
-            sprite.drawString("Blad Serwera (RPi)", 64, 50);
+            sprite.drawString("Blad HTTP (PC)", 64, 50);
             sprite.setTextSize(1.5);
             char errStr[16];
-            snprintf(errStr, sizeof(errStr), "HTTP:%d", cachedRpiData.lastHttpCode);
+            snprintf(errStr, sizeof(errStr), "HTTP:%d", cachedPCData.lastHttpCode);
             sprite.drawString(errStr, 64, 75);
         }
         
-        sprite.setTextDatum(top_left); // Przywrócenie domyślnego
+        sprite.setTextDatum(top_left);
     }
 
-    // "load..." 
-    if (cachedRpiData.lastHttpCode == 0) {
+    if (cachedPCData.lastHttpCode == 0) {
         sprite.setTextDatum(bottom_right); 
         sprite.setTextSize(1);
         sprite.setTextColor(YELLOW);

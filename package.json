@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "express": "^5.2.1",
+    "nodemon": "^3.1.14",
     "systeminformation": "^5.31.4"
   },
   "name": "atoms3-monitor",
@@ -10,7 +11,6 @@
     "lib": "lib",
     "test": "test"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"

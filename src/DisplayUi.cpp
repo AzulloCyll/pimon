@@ -2,6 +2,7 @@
 #include "screens/Thermometer.h"
 #include "screens/Pihole.h"
 #include "screens/Raspberry.h"
+#include "screens/PCMonitor.h"
 
 static M5Canvas sprite(&M5.Display);
 static M5Canvas oldSprite(&M5.Display);
@@ -20,7 +21,9 @@ void initDisplay() {
 }
 
 void renderScreen(M5Canvas &targetSprite, const SensorData &data, int screenIndex) {
-    if (screenIndex == 2) {
+    if (screenIndex == 3) {
+        renderPCMonitorScreen(targetSprite);
+    } else if (screenIndex == 2) {
         renderRaspberryScreen(targetSprite);
     } else if (screenIndex == 1) {
         renderPiholeScreen(targetSprite);
@@ -41,10 +44,10 @@ void updateDisplay(const SensorData &data, int screenIndex) {
         // 3. Wykonaj animację przejścia (przesuwanie w lewo/prawo)
         int step = 16; // Krok o 16 pikseli (8 klatek animacji, całkiem płynne i szybkie)
         bool movingRight = screenIndex > lastScreenIndex;
-        // Skok z 2 na 0 -> potraktuj jako ruch "w prawo" do przodu
-        if (lastScreenIndex == 2 && screenIndex == 0) movingRight = true;
-        // Skok z 0 na 2 -> "w lewo" do tyłu
-        if (lastScreenIndex == 0 && screenIndex == 2) movingRight = false;
+        // Skok z ostatniego na pierwszy -> potraktuj jako ruch "w prawo" do przodu
+        if (lastScreenIndex == 3 && screenIndex == 0) movingRight = true;
+        // Skok z pierwszego na ostatni -> "w lewo" do tyłu
+        if (lastScreenIndex == 0 && screenIndex == 3) movingRight = false;
         
         for (int i = 0; i <= 128; i += step) {
             if (movingRight) {
